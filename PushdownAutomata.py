@@ -1,38 +1,6 @@
-from threading import Thread
 import socket
 import multiprocessing
-
-def process(func):
-    def startProcess(palavra, desempilha = "ε", empilha = "ε", estado_atual = None, pilha: list = []):
-        host = "localhost"
-        port = 9876
-
-        # Socket servidor
-        svr = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        svr.bind((host, port))
-        svr.listen(2)
-
-        rec = multiprocessing.Process(target=func, args=(palavra, desempilha, empilha, estado_atual, pilha))
-        rec.start()
-
-        while True:
-            con, adr = svr.accept()
-
-            data = con.recv(1024)
-            
-            if not data:
-                break
-
-            print(data.decode('utf-8'))
-
-            if data.decode('utf-8') == '1':
-                rec.terminate()
-                print("agr foi msm")
-                break
-            
-            return True
-    
-    return startProcess
+from threading import Thread
 
 class PushdownAutomata():
     def __init__(self, Q, Σ, Γ, Δ, q0, F):
@@ -51,8 +19,6 @@ class PushdownAutomata():
         self.Δ = Δ
         self.q0 = q0
         self.F = F
-
-    clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     def step(self, palavra, desempilha = "ε", empilha = "ε", estado_atual = None, pilha: list = []):
         if not estado_atual:
@@ -101,29 +67,28 @@ class PushdownAutomata():
         if not transição_achada:
             if palavra == "":
                 if (estado_atual in self.F) and (pilha == []):
-                    self.clt.connect(("localhost", 9876))
-                    self.clt.send("1".encode("utf-8"))
-                    print("Fim do reconhecimento")
-
-                    return True
+                    clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    clt.connect(("localhost", 9876))
+                    clt.send("1".encode("utf-8"))
+                    #return True
             
             return False
         
         for x in tra:
             Thread(target=self.step, args=x).start()
 
-        if any:
-            return True
+        print("fim")
+
+
     
-    def recog(self, palavra):
-        #def startProcess(self, palavra, desempilha = "ε", empilha = "ε", estado_atual = None, pilha: list = []):
+    def recognize(self, palavra):
         host = "localhost"
         port = 9876
 
-        # Socket servidor
+        # Server Socket
         svr = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         svr.bind((host, port))
-        svr.listen(2)
+        svr.listen(1)
 
         rec = multiprocessing.Process(target=self.step, args=(palavra,))
         rec.start()
@@ -145,4 +110,3 @@ class PushdownAutomata():
             
             return True
     
-        #return startProcess
