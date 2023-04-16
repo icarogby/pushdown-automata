@@ -2,6 +2,34 @@ import socket
 import multiprocessing
 from threading import Thread
 
+def listen(process: multiprocessing.Process):
+    host = "localhost"
+    port = 9876
+
+    # Server Socket
+    svr = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    svr.bind((host, port))
+    svr.listen(1)
+
+    while True:
+        con, adr = svr.accept()
+        data = con.recv(1024)
+        
+        if not data:
+            break
+
+        print(data.decode('utf-8'))
+
+        if data.decode('utf-8') == '1':
+            process.terminate()
+            print("agr foi msm")
+            svr.close()
+            return True
+        else:
+            print("não foi")
+            svr.close()
+            return False
+
 class PushdownAutomata():
     def __init__(self, Q, Σ, Γ, Δ, q0, F):
         """
@@ -70,6 +98,7 @@ class PushdownAutomata():
                     clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     clt.connect(("localhost", 9876))
                     clt.send("1".encode("utf-8"))
+                    clt.close()
                     #return True
             
             return False
@@ -79,34 +108,17 @@ class PushdownAutomata():
 
         print("fim")
 
-
-    
     def recognize(self, palavra):
-        host = "localhost"
-        port = 9876
-
-        # Server Socket
-        svr = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        svr.bind((host, port))
-        svr.listen(1)
-
         rec = multiprocessing.Process(target=self.step, args=(palavra,))
+        Thread(target=listen, args=(rec,)).start()
+        
         rec.start()
 
-        while True:
-            con, adr = svr.accept()
-
-            data = con.recv(1024)
-            
-            if not data:
-                break
-
-            print(data.decode('utf-8'))
-
-            if data.decode('utf-8') == '1':
-                rec.terminate()
-                print("agr foi msm")
-                break
-            
-            return True
-    
+        rec.join()
+        try:
+            clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            clt.connect(("localhost", 9876))
+            clt.send("0".encode("utf-8"))
+            clt.close()
+        except:
+            pass
