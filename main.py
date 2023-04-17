@@ -22,7 +22,7 @@ def main():
         }
     q0 = "q0"
     F = ["q1", "q2"]
-    cadeia2 = 'abb'
+    cadeia2 = 'aabb'
 
     ap2 = PushdownAutomata(Q, Σ, Γ, Δ, q0, F)
     ap2.recognize(cadeia2)

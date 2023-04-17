@@ -1,6 +1,7 @@
 import socket
 import multiprocessing
-from threading import Thread
+from threading import Thread, enumerate
+from time import sleep as wait
 
 def listen(process: multiprocessing.Process):
     host = "localhost"
@@ -29,8 +30,10 @@ def listen(process: multiprocessing.Process):
             print("não foi")
             svr.close()
             return False
-
+        
 class PushdownAutomata():
+    iWasKilled = False
+
     def __init__(self, Q, Σ, Γ, Δ, q0, F):
         """
         Q:  Conjunto de estados (Lista de strings)
@@ -69,8 +72,15 @@ class PushdownAutomata():
         if empilha != "ε":
             for i in range(len(empilha)-1, -1, -1):
                 pilha.append(empilha[i])
-
-
+        
+        if palavra == "":
+            if (estado_atual in self.F) and (pilha == []):
+                clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                clt.connect(("localhost", 9876))
+                clt.send("1".encode("utf-8"))
+                clt.close()
+                return True
+            
         transição_achada = False
         tra = []
 
@@ -92,33 +102,29 @@ class PushdownAutomata():
                 y = (palavra[aux:], transição[1], transição[2], transição[3], pilha)
                 tra.append(y)
 
-        if not transição_achada:
-            if palavra == "":
-                if (estado_atual in self.F) and (pilha == []):
-                    clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    clt.connect(("localhost", 9876))
-                    clt.send("1".encode("utf-8"))
-                    clt.close()
-                    #return True
+        #if not transição_achada:
             
-            return False
+        #    return False
         
         for x in tra:
             Thread(target=self.step, args=x).start()
 
-        print("fim")
-
+    
     def recognize(self, palavra):
         rec = multiprocessing.Process(target=self.step, args=(palavra,))
         Thread(target=listen, args=(rec,)).start()
         
         rec.start()
-
         rec.join()
-        try:
-            clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            clt.connect(("localhost", 9876))
-            clt.send("0".encode("utf-8"))
-            clt.close()
-        except:
-            pass
+        
+        x = enumerate()
+        for thread in x:
+            if thread.name != "MainThread":
+                clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                clt.connect(("localhost", 9876))
+                clt.send("0".encode("utf-8"))
+                clt.close()
+
+                return False
+
+        return True
