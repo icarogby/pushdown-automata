@@ -1,39 +1,32 @@
 import socket
-import multiprocessing
+from multiprocessing import Process
 from threading import Thread, enumerate
-from time import sleep as wait
 
-def listen(process: multiprocessing.Process):
-    host = "localhost"
-    port = 9876
+def breakLoop():
+    pass
+
+def closeStepProcess(stepProcess: Process, steps: list):
+    host = 'localhost'
+    port = 8765
 
     # Server Socket
     svr = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     svr.bind((host, port))
     svr.listen(1)
 
-    while True:
-        con, adr = svr.accept()
-        data = con.recv(1024)
-        
-        if not data:
-            break
+    con, adr = svr.accept()
+    data = con.recv(1024)
 
-        print(data.decode('utf-8'))
+    result, stepsFinded = data.decode('utf-8').split('|')
 
-        if data.decode('utf-8') == '1':
-            process.terminate()
-            print("agr foi msm")
-            svr.close()
-            return True
-        else:
-            print("não foi")
-            svr.close()
-            return False
+    if result == 'Accepted': # If one flow accepted the word, stop waiting for other flows
+        svr.close()
+        steps.append(stepsFinded)
+        stepProcess.terminate()
+    elif result == 'Rejected': # If the word was rejected, end self thread
+        svr.close()
         
 class PushdownAutomata():
-    iWasKilled = False
-
     def __init__(self, Q, Σ, Γ, Δ, q0, F):
         """
         Q:  Conjunto de estados (Lista de strings)
@@ -76,8 +69,8 @@ class PushdownAutomata():
         if palavra == "":
             if (estado_atual in self.F) and (pilha == []):
                 clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                clt.connect(("localhost", 9876))
-                clt.send("1".encode("utf-8"))
+                clt.connect(("localhost", 8765))
+                clt.send("Accepted|stepshere".encode("utf-8"))
                 clt.close()
                 return True
             
@@ -101,30 +94,29 @@ class PushdownAutomata():
                 
                 y = (palavra[aux:], transição[1], transição[2], transição[3], pilha)
                 tra.append(y)
-
-        #if not transição_achada:
-            
-        #    return False
         
         for x in tra:
             Thread(target=self.step, args=x).start()
 
     
     def recognize(self, palavra):
-        rec = multiprocessing.Process(target=self.step, args=(palavra,))
-        Thread(target=listen, args=(rec,)).start()
+        steps = []
+        rec = Process(target=self.step, args=(palavra,))
+        Thread(target=closeStepProcess, args=(rec, steps)).start()
         
         rec.start()
         rec.join()
         
-        x = enumerate()
-        for thread in x:
-            if thread.name != "MainThread":
-                clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                clt.connect(("localhost", 9876))
-                clt.send("0".encode("utf-8"))
-                clt.close()
+        closeStepProcessIsRunning = len(enumerate()) > 1
 
-                return False
+        if closeStepProcessIsRunning: # If the word was rejected, step process won't be terminated
+            clt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            clt.connect(("localhost", 8765))
+            clt.send("Rejected|".encode("utf-8"))
+            clt.close()
 
-        return True
+            # Return False since the word was rejected
+            return False, None
+        else:
+            # Return True since the word was accepted
+            return True, steps

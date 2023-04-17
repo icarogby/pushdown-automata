@@ -10,7 +10,8 @@ def main():
     cadeia1 = '()()'
 
     ap1 = PushdownAutomata(Q, Σ, Γ, Δ, q0, F)
-    ap1.recognize(cadeia1)
+    x,y = ap1.recognize(cadeia1)
+    print(x,y)
 
     Q = ["q0", "q1", "q2"]
     Σ = ["a", "b", "c"]
@@ -22,10 +23,11 @@ def main():
         }
     q0 = "q0"
     F = ["q1", "q2"]
-    cadeia2 = 'aabb'
+    cadeia2 = 'aab'
 
     ap2 = PushdownAutomata(Q, Σ, Γ, Δ, q0, F)
-    ap2.recognize(cadeia2)
+    x,y = ap2.recognize(cadeia2)
+    print(x,y)
 
 
 if __name__ == "__main__":
